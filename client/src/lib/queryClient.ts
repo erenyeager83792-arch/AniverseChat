@@ -12,7 +12,8 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const fullUrl = url.startsWith('http') ? url : `${getBaseUrl()}${url}`;
+  const res = await fetch(fullUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -23,13 +24,24 @@ export async function apiRequest(
   return res;
 }
 
+// Get base URL for API calls
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // In browser, use current origin
+    return window.location.origin;
+  }
+  // Fallback for server-side rendering
+  return '';
+};
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = `${getBaseUrl()}${queryKey.join("/")}`;
+    const res = await fetch(url, {
       credentials: "include",
     });
 
