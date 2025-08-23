@@ -107,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "llama-3.1-sonar-small-128k-online",
+          model: "sonar",
           messages: perplexityMessages,
           temperature: 0.2,
           top_p: 0.9,
