@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Download, Github, Globe } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatSettingsProps {
   open: boolean;
@@ -13,17 +14,80 @@ interface ChatSettingsProps {
 
 export function ChatSettings({ open, onOpenChange }: ChatSettingsProps) {
   const [enableNotifications, setEnableNotifications] = useState(true);
-  const [theme, setTheme] = useState("dark");
   const [language, setLanguage] = useState("english");
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const { toast } = useToast();
 
-  const installPWA = () => {
-    // Check if the app can be installed
-    if ('BeforeInstallPromptEvent' in window) {
-      // This would trigger the PWA install prompt
-      window.dispatchEvent(new Event('beforeinstallprompt'));
+  useEffect(() => {
+    // Load language preference from localStorage
+    const savedLanguage = localStorage.getItem('aniverse-language') || 'english';
+    setLanguage(savedLanguage);
+
+    // Listen for PWA install prompt
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    localStorage.setItem('aniverse-language', newLanguage);
+    
+    // Show confirmation toast based on selected language
+    const messages = {
+      english: "Language changed to English",
+      japanese: "言語が日本語に変更されました",
+      spanish: "Idioma cambiado a Español",
+      french: "Langue changée en Français"
+    };
+    
+    toast({
+      title: messages[newLanguage as keyof typeof messages] || messages.english,
+      duration: 2000,
+    });
+  };
+
+  const installPWA = async () => {
+    if (deferredPrompt) {
+      // Show the PWA install prompt
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        toast({
+          title: "AniVerse AI installed successfully!",
+          description: "You can now access the app from your home screen.",
+          duration: 3000,
+        });
+      }
+      setDeferredPrompt(null);
     } else {
-      // Fallback message for browsers that don't support PWA installation
-      alert("To install AniVerse AI as an app:\n\n1. In Chrome/Edge: Click the install icon in the address bar\n2. In Safari: Tap Share > Add to Home Screen\n3. In Firefox: Look for 'Install' option in the menu");
+      // Fallback instructions for different browsers
+      const userAgent = navigator.userAgent.toLowerCase();
+      let instructions = "";
+      
+      if (userAgent.includes('chrome') || userAgent.includes('edge')) {
+        instructions = "Click the install icon (⬇️) in your browser's address bar to install AniVerse AI as an app.";
+      } else if (userAgent.includes('safari')) {
+        instructions = "Tap the Share button and select 'Add to Home Screen' to install AniVerse AI.";
+      } else if (userAgent.includes('firefox')) {
+        instructions = "Look for the 'Install' option in your browser menu to add AniVerse AI to your device.";
+      } else {
+        instructions = "Your browser supports app installation. Look for an install option in your browser menu.";
+      }
+      
+      toast({
+        title: "Install AniVerse AI",
+        description: instructions,
+        duration: 5000,
+      });
     }
   };
 
@@ -51,33 +115,18 @@ export function ChatSettings({ open, onOpenChange }: ChatSettingsProps) {
             />
           </div>
 
-          {/* Theme */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Theme</Label>
-            <Select value={theme} onValueChange={setTheme}>
-              <SelectTrigger className="bg-dark-muted border-dark-border" data-testid="select-theme">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-dark-surface border-dark-border">
-                <SelectItem value="dark">Dark Mode</SelectItem>
-                <SelectItem value="light">Light Mode</SelectItem>
-                <SelectItem value="auto">Auto</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Language */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Language</Label>
-            <Select value={language} onValueChange={setLanguage}>
+            <Select value={language} onValueChange={handleLanguageChange}>
               <SelectTrigger className="bg-dark-muted border-dark-border" data-testid="select-language">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-dark-surface border-dark-border">
-                <SelectItem value="english">English</SelectItem>
-                <SelectItem value="japanese">日本語</SelectItem>
-                <SelectItem value="spanish">Español</SelectItem>
-                <SelectItem value="french">Français</SelectItem>
+                <SelectItem value="english">🇺🇸 English</SelectItem>
+                <SelectItem value="japanese">🇯🇵 日本語</SelectItem>
+                <SelectItem value="spanish">🇪🇸 Español</SelectItem>
+                <SelectItem value="french">🇫🇷 Français</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -91,7 +140,7 @@ export function ChatSettings({ open, onOpenChange }: ChatSettingsProps) {
               data-testid="button-install-pwa"
             >
               <Download className="w-4 h-4 mr-2" />
-              Install as App
+              {deferredPrompt ? "Install as App" : "Add to Home Screen"}
             </Button>
           </div>
 
@@ -120,6 +169,11 @@ export function ChatSettings({ open, onOpenChange }: ChatSettingsProps) {
               >
                 <Globe className="w-4 h-4" />
               </Button>
+            </div>
+            
+            {/* Copyright */}
+            <div className="pt-2 text-center">
+              <p className="text-xs text-gray-500">© Yeagerist</p>
             </div>
           </div>
         </div>
