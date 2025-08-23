@@ -7,7 +7,7 @@ import { MessageBubble, TypingIndicator } from "./message-bubble";
 import { chatApi, type Message } from "@/lib/chat-api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Send, ArrowDown, Trash2, Star, Book, Users, Mic } from "lucide-react";
+import { Send, ArrowDown, Trash2, Star, Book, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInterfaceProps {
@@ -128,25 +128,16 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
         {/* Input Area */}
         <div className="glass-surface rounded-2xl p-4">
           <form onSubmit={handleSubmit} className="flex space-x-3">
-            <div className="flex-1 relative">
+            <div className="flex-1">
               <Input
                 type="text"
                 placeholder="Ask about your favorite manga or anime..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="w-full bg-dark-surface border border-dark-border rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-anime-orange focus:border-transparent transition-all duration-200"
+                className="w-full bg-dark-surface border border-dark-border rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-anime-orange focus:border-transparent transition-all duration-200"
                 disabled={sendMessageMutation.isPending}
                 data-testid="input-message"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors p-1"
-                data-testid="button-voice"
-              >
-                <Mic className="w-4 h-4" />
-              </Button>
             </div>
             <Button
               type="submit"

@@ -2,10 +2,14 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/navbar";
 import { ChatInterface } from "@/components/chat/chat-interface";
+import { ChatHistory } from "@/components/chat/chat-history";
+import { ChatSettings } from "@/components/chat/chat-settings";
 import { chatApi } from "@/lib/chat-api";
 
 export default function Chat() {
   const [currentSessionId, setCurrentSessionId] = useState<string>("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Get or create a session
   const { data: sessions } = useQuery({
@@ -33,13 +37,15 @@ export default function Chat() {
   }, [sessions]);
 
   const handleHistoryClick = () => {
-    // TODO: Implement history view
-    console.log("History clicked");
+    setShowHistory(true);
   };
 
   const handleSettingsClick = () => {
-    // TODO: Implement settings view
-    console.log("Settings clicked");
+    setShowSettings(true);
+  };
+
+  const handleSessionSelect = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
   };
 
   if (!currentSessionId) {
@@ -64,6 +70,18 @@ export default function Chat() {
       />
       
       <ChatInterface sessionId={currentSessionId} />
+      
+      <ChatHistory
+        currentSessionId={currentSessionId}
+        onSessionSelect={handleSessionSelect}
+        open={showHistory}
+        onOpenChange={setShowHistory}
+      />
+      
+      <ChatSettings
+        open={showSettings}
+        onOpenChange={setShowSettings}
+      />
     </div>
   );
 }
