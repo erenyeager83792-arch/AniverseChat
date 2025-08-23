@@ -7,8 +7,9 @@ import { MessageBubble, TypingIndicator } from "./message-bubble";
 import { chatApi, type Message } from "@/lib/chat-api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Send, ArrowDown, Trash2, Star, Book, Users } from "lucide-react";
+import { Send, ArrowDown, Star, Book, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1755968455298.jpg";
 
 interface ChatInterfaceProps {
   sessionId: string;
@@ -84,8 +85,8 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
         {messages.length === 0 && !isLoading && (
           <div className="text-center mb-8">
             <div className="glass-surface rounded-2xl p-8 mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-anime-orange to-anime-red flex items-center justify-center">
-                <Send className="text-white text-2xl w-8 h-8" />
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full border-4 border-anime-orange overflow-hidden">
+                <img src={animeAvatar} alt="AniVerse AI" className="w-full h-full object-cover" />
               </div>
               <h2 className="text-2xl font-display font-bold mb-2">Welcome to AniVerse AI</h2>
               <p className="text-gray-400 text-lg">Your intelligent companion for everything Manga & Anime</p>

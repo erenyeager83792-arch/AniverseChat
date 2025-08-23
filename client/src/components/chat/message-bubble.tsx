@@ -1,6 +1,6 @@
 import { Message } from "@/lib/chat-api";
-import { Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1755968455298.jpg";
 
 interface MessageBubbleProps {
   message: Message;
@@ -31,8 +31,8 @@ export function MessageBubble({ message, isLatest }: MessageBubbleProps) {
           </div>
         ) : (
           <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-anime-orange to-anime-red flex items-center justify-center flex-shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-full border-2 border-anime-orange flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
+              <img src={animeAvatar} alt="AI Assistant" className="w-full h-full object-cover" />
             </div>
             <div className="chat-bubble-ai rounded-2xl rounded-bl-md px-4 py-3 shadow-lg">
               <p className="text-white leading-relaxed whitespace-pre-wrap" data-testid={`text-message-${message.id}`}>
@@ -54,8 +54,8 @@ export function TypingIndicator() {
     <div className="flex justify-start">
       <div className="max-w-xs sm:max-w-md lg:max-w-lg">
         <div className="flex items-start space-x-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-anime-orange to-anime-red flex items-center justify-center flex-shrink-0 mt-1">
-            <Bot className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full border-2 border-anime-orange flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
+            <img src={animeAvatar} alt="AI Assistant" className="w-full h-full object-cover" />
           </div>
           <div className="chat-bubble-ai rounded-2xl rounded-bl-md px-4 py-3 shadow-lg">
             <div className="flex space-x-1" data-testid="typing-indicator">
