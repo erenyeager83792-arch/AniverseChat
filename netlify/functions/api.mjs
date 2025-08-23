@@ -129,7 +129,6 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
             role: "system",
             content: "You are AniVerse AI, an expert assistant specialized in anime and manga. Provide detailed, accurate, and enthusiastic responses about anime series, manga, characters, plot analysis, recommendations, and industry insights. Use your knowledge to help users discover new content and deepen their understanding of anime and manga culture."
           },
-          ...conversationHistory,
           { role: "user", content: content }
         ],
         max_tokens: 1000,
