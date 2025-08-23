@@ -135,6 +135,11 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 107, 53, 0.8);
   }
+
+  /* Ensure proper flex layout for chat container */
+  [data-radix-scroll-area-viewport] {
+    height: 100% !important;
+  }
 }
 
 @layer utilities {

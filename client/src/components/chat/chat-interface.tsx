@@ -79,7 +79,7 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
 
   return (
     <main className="relative z-10 flex flex-col h-screen pt-16">
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col min-h-0">
         
         {/* Welcome Section - Only show when no messages */}
         {messages.length === 0 && !isLoading && (
@@ -103,7 +103,7 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
         {/* Chat Messages Area */}
         <ScrollArea 
           ref={scrollAreaRef}
-          className="flex-1 mb-6 custom-scrollbar"
+          className="flex-1 mb-6 custom-scrollbar min-h-0"
           onScrollCapture={handleScroll}
         >
           <div className="space-y-4 pr-4">
@@ -127,7 +127,7 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
         </ScrollArea>
         
         {/* Input Area */}
-        <div className="glass-surface rounded-2xl p-4">
+        <div className="glass-surface rounded-2xl p-4 flex-shrink-0">
           <form onSubmit={handleSubmit} className="flex space-x-3">
             <div className="flex-1">
               <Input
