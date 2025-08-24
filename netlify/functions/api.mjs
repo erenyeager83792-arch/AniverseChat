@@ -4,6 +4,11 @@ import crypto from 'crypto';
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "";
 
+console.log('[NETLIFY] Starting function...');
+console.log('[NETLIFY] Environment check:');
+console.log('[NETLIFY] Has PERPLEXITY_API_KEY:', !!PERPLEXITY_API_KEY);
+console.log('[NETLIFY] API Key length:', PERPLEXITY_API_KEY ? PERPLEXITY_API_KEY.length : 0);
+
 const app = express();
 
 // Middleware
@@ -140,7 +145,8 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
     let aiResponse = "I'm currently in demo mode. Please configure your PERPLEXITY_API_KEY environment variable for full AI functionality.";
 
     // Call Perplexity API if available
-    if (PERPLEXITY_API_KEY) {
+    console.log('[NETLIFY] Checking API key availability:', !!PERPLEXITY_API_KEY);
+    if (PERPLEXITY_API_KEY && PERPLEXITY_API_KEY.length > 10) {
       try {
         console.log('[NETLIFY] Calling Perplexity API with sonar model');
         
@@ -188,8 +194,12 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
           console.log(`[NETLIFY] AI response received, length: ${aiResponse.length} characters`);
         } else {
           console.error(`[NETLIFY] Perplexity API error: ${perplexityResponse.status}`);
-          const errorText = await perplexityResponse.text();
-          console.error(`[NETLIFY] API Error details:`, errorText);
+          try {
+            const errorText = await perplexityResponse.text();
+            console.error(`[NETLIFY] API Error details:`, errorText);
+          } catch (e) {
+            console.error(`[NETLIFY] Could not read error response:`, e);
+          }
           aiResponse = "Sorry, I'm having trouble accessing my knowledge base right now. Please try again in a moment.";
         }
       } catch (apiError) {
