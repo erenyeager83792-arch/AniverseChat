@@ -1,7 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Clock, Settings, Plus, LogOut } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import type { User } from "@shared/schema";
+import { Clock, Settings, RotateCcw } from "lucide-react";
 import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1755968455298.jpg";
 
 interface HeaderProps {
@@ -10,10 +8,8 @@ interface HeaderProps {
 }
 
 export function Header({ onHistoryClick, onSettingsClick }: HeaderProps) {
-  const { user } = useAuth() as { user: User | null };
-
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleNewSession = () => {
+    window.location.reload();
   };
 
   return (
@@ -31,25 +27,8 @@ export function Header({ onHistoryClick, onSettingsClick }: HeaderProps) {
             </div>
           </div>
 
-          {/* User Info & Actions */}
+          {/* Actions */}
           <div className="flex items-center space-x-2">
-            {user && (
-              <div className="hidden sm:flex items-center space-x-3 mr-4">
-                {user.profileImageUrl && (
-                  <img 
-                    src={user.profileImageUrl} 
-                    alt="Profile" 
-                    className="w-8 h-8 rounded-full border-2 border-anime-orange object-cover"
-                  />
-                )}
-                <div className="text-right">
-                  <p className="text-sm font-medium text-white">
-                    {user.firstName || user.email}
-                  </p>
-                  <p className="text-xs text-gray-400">Welcome back!</p>
-                </div>
-              </div>
-            )}
             
             <Button
               variant="outline"
@@ -76,12 +55,12 @@ export function Header({ onHistoryClick, onSettingsClick }: HeaderProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleLogout}
+              onClick={handleNewSession}
               className="flex items-center space-x-2 bg-dark-surface hover:bg-dark-border border-dark-border text-gray-300 hover:text-white"
-              data-testid="button-logout"
+              data-testid="button-new-session"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <RotateCcw className="w-4 h-4" />
+              <span className="hidden sm:inline">New Session</span>
             </Button>
 
             {/* Mobile menu buttons */}

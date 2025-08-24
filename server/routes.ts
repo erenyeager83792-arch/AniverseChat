@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertChatSessionSchema, insertMessageSchema, chatMessageSchema, type ChatResponse } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupSession, getSessionUserId } from "./replitAuth";
 
 interface PerplexityMessage {
   role: "system" | "user" | "assistant";
@@ -20,14 +20,26 @@ interface PerplexityResponse {
 export async function registerRoutes(app: Express): Promise<Server> {
   const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 
-  // Auth middleware
-  await setupAuth(app);
+  // Session middleware
+  setupSession(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // User routes
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
+      const userId = getSessionUserId(req);
+      let user = await storage.getUser(userId);
+      
+      // Create user if doesn't exist
+      if (!user) {
+        user = await storage.upsertUser({
+          id: userId,
+          email: `user_${userId.slice(0, 8)}@aniverse.ai`,
+          firstName: 'AniVerse',
+          lastName: 'User',
+          profileImageUrl: '',
+        });
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -35,10 +47,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new chat session (protected)
-  app.post("/api/chat/sessions", isAuthenticated, async (req: any, res) => {
+  // Create a new chat session
+  app.post("/api/chat/sessions", async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = getSessionUserId(req);
       const sessionData = { 
         title: req.body.title || "New Chat",
         userId 
@@ -51,10 +63,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all chat sessions for user (protected)
-  app.get("/api/chat/sessions", isAuthenticated, async (req: any, res) => {
+  // Get all chat sessions for user
+  app.get("/api/chat/sessions", async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = getSessionUserId(req);
       const sessions = await storage.getAllChatSessions(userId);
       res.json(sessions);
     } catch (error) {
@@ -63,11 +75,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get messages for a session (protected)
-  app.get("/api/chat/sessions/:sessionId/messages", isAuthenticated, async (req: any, res) => {
+  // Get messages for a session
+  app.get("/api/chat/sessions/:sessionId/messages", async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.id;
+      const userId = getSessionUserId(req);
       
       // Verify user owns this session
       const session = await storage.getChatSession(sessionId);
@@ -83,12 +95,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send a message to Perplexity API (protected)
-  app.post("/api/chat/sessions/:sessionId/messages", isAuthenticated, async (req: any, res) => {
+  // Send a message to Perplexity API
+  app.post("/api/chat/sessions/:sessionId/messages", async (req: any, res) => {
     try {
       const { sessionId } = req.params;
       const { content } = chatMessageSchema.parse(req.body);
-      const userId = req.user.id;
+      const userId = getSessionUserId(req);
 
       // Check if session exists and user owns it
       const session = await storage.getChatSession(sessionId);
@@ -204,11 +216,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a chat session (protected)
-  app.delete("/api/chat/sessions/:sessionId", isAuthenticated, async (req: any, res) => {
+  // Delete a chat session
+  app.delete("/api/chat/sessions/:sessionId", async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.id;
+      const userId = getSessionUserId(req);
       
       // Verify user owns this session
       const session = await storage.getChatSession(sessionId);

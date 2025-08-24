@@ -13,14 +13,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { chatApi } from "@/lib/chat-api";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  // Always authenticated now - no login required
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
-    // Create a new session when the app loads (only if authenticated)
-    if (isAuthenticated && !currentSessionId) {
+    // Create a new session when the app loads
+    if (!currentSessionId) {
       const initializeSession = async () => {
         try {
           const session = await chatApi.createSession();
@@ -32,47 +32,41 @@ function Router() {
       
       initializeSession();
     }
-  }, [isAuthenticated, currentSessionId]);
+  }, [currentSessionId]);
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/">
-            <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-bg to-dark-surface">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 bg-[url('/src/assets/file_00000000b8ac61f5b513d34bcf737fce_1755966573663.png')] bg-cover bg-center opacity-20 pointer-events-none"></div>
-              
-              <Header 
-                onHistoryClick={() => setShowHistory(true)}
-                onSettingsClick={() => setShowSettings(true)}
-              />
-              
-              {currentSessionId ? (
-                <ChatInterface sessionId={currentSessionId} />
-              ) : (
-                <div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-anime-orange"></div>
-                </div>
-              )}
-              
-              <ChatHistory 
-                currentSessionId={currentSessionId || undefined}
-                onSessionSelect={setCurrentSessionId}
-                open={showHistory}
-                onOpenChange={setShowHistory}
-              />
-              
-              <ChatSettings 
-                open={showSettings}
-                onOpenChange={setShowSettings}
-              />
-            </div>
-          </Route>
-        </>
-      )}
+        <Route path="/">
+          <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-bg to-dark-surface">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-[url('/src/assets/file_00000000b8ac61f5b513d34bcf737fce_1755966573663.png')] bg-cover bg-center opacity-20 pointer-events-none"></div>
+            
+            <Header 
+              onHistoryClick={() => setShowHistory(true)}
+              onSettingsClick={() => setShowSettings(true)}
+            />
+            
+            {currentSessionId ? (
+              <ChatInterface sessionId={currentSessionId} />
+            ) : (
+              <div className="flex items-center justify-center h-screen">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-anime-orange"></div>
+              </div>
+            )}
+            
+            <ChatHistory 
+              currentSessionId={currentSessionId || undefined}
+              onSessionSelect={setCurrentSessionId}
+              open={showHistory}
+              onOpenChange={setShowHistory}
+            />
+            
+            <ChatSettings 
+              open={showSettings}
+              onOpenChange={setShowSettings}
+            />
+          </div>
+        </Route>
     </Switch>
   );
 }
