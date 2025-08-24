@@ -50,8 +50,9 @@ app.get('/api/auth/user', (req, res) => {
   });
 });
 
-// For serverless functions, we can't rely on persistent storage
-// Each session will be independent and temporary
+// For serverless functions, we use URL parameters to pass conversation context
+// Each session maintains conversation through API calls
+const conversations = new Map(); // Temporary storage per function instance
 
 // Chat session routes
 app.post("/api/chat/sessions", async (req, res) => {
@@ -89,16 +90,23 @@ app.get("/api/chat/sessions/:sessionId/messages", async (req, res) => {
     
     console.log(`[NETLIFY] Fetching messages for session: ${sessionId}`);
     
-    // For serverless, always return greeting message
-    const greetingMessage = {
-      id: crypto.randomUUID(),
-      sessionId,
-      role: 'assistant',
-      content: 'Hello! I\'m AniVerse AI, your anime and manga companion. What would you like to discuss today?',
-      timestamp: new Date().toISOString()
-    };
+    // Get conversation from temporary storage or start fresh
+    const sessionMessages = conversations.get(sessionId) || [];
     
-    res.json([greetingMessage]);
+    // Add greeting if no messages exist
+    if (sessionMessages.length === 0) {
+      const greetingMessage = {
+        id: crypto.randomUUID(),
+        sessionId,
+        role: 'assistant',
+        content: 'Hello! I\'m AniVerse AI, your anime and manga companion. What would you like to discuss today?',
+        timestamp: new Date().toISOString()
+      };
+      sessionMessages.push(greetingMessage);
+      conversations.set(sessionId, sessionMessages);
+    }
+    
+    res.json(sessionMessages);
   } catch (error) {
     console.error("Error fetching messages:", error);
     res.status(500).json({ error: "Failed to fetch messages" });
@@ -116,6 +124,19 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
 
     console.log(`[NETLIFY] Processing message for session ${sessionId}: "${content.substring(0, 50)}..."`); 
 
+    // Get existing conversation
+    const sessionMessages = conversations.get(sessionId) || [];
+    
+    // Add user message
+    const userMessage = {
+      id: crypto.randomUUID(),
+      sessionId,
+      role: "user",
+      content: content,
+      timestamp: new Date().toISOString()
+    };
+    sessionMessages.push(userMessage);
+
     let aiResponse = "I'm currently in demo mode. Please configure your PERPLEXITY_API_KEY environment variable for full AI functionality.";
 
     // Call Perplexity API if available
@@ -123,15 +144,17 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
       try {
         console.log('[NETLIFY] Calling Perplexity API with sonar model');
         
+        // Use conversation context (last 8 messages)
+        const recentMessages = sessionMessages.slice(-8);
         const perplexityMessages = [
           {
             role: "system",
             content: "You are AniVerse AI, an intelligent assistant specialized in anime and manga. You have deep knowledge about anime series, manga titles, characters, storylines, recommendations, and the broader anime/manga culture. Provide detailed, accurate, and engaging responses about anime and manga topics. Be enthusiastic and knowledgeable while maintaining a friendly tone. Always respond to greetings like 'hi', 'hello', 'hey' in a friendly manner."
           },
-          {
-            role: "user",
-            content: content
-          }
+          ...recentMessages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
         ];
         
         const controller = new AbortController();
@@ -178,6 +201,19 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
         }
       }
     }
+    
+    // Add AI response message
+    const aiMessage = {
+      id: crypto.randomUUID(),
+      sessionId,
+      role: "assistant",
+      content: aiResponse,
+      timestamp: new Date().toISOString()
+    };
+    sessionMessages.push(aiMessage);
+    
+    // Store updated conversation
+    conversations.set(sessionId, sessionMessages);
 
     res.json({
       message: aiResponse,
@@ -209,10 +245,11 @@ app.get('/api/health', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     hasPerplexityKey: !!PERPLEXITY_API_KEY,
-    environment: {
-      hasGoogleOAuth: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-      hasDatabase: !!process.env.DATABASE_URL,
-      hasSessionSecret: !!process.env.SESSION_SECRET
+    mode: 'serverless',
+    features: {
+      aiResponses: !!PERPLEXITY_API_KEY,
+      conversationMemory: true,
+      noAuthRequired: true
     }
   });
 });
