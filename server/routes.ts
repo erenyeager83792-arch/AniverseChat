@@ -26,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -38,7 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new chat session (protected)
   app.post("/api/chat/sessions", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const sessionData = { 
         title: req.body.title || "New Chat",
         userId 
@@ -54,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all chat sessions for user (protected)
   app.get("/api/chat/sessions", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const sessions = await storage.getAllChatSessions(userId);
       res.json(sessions);
     } catch (error) {
@@ -67,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chat/sessions/:sessionId/messages", isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Verify user owns this session
       const session = await storage.getChatSession(sessionId);
@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sessionId } = req.params;
       const { content } = chatMessageSchema.parse(req.body);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       // Check if session exists and user owns it
       const session = await storage.getChatSession(sessionId);
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/chat/sessions/:sessionId", isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Verify user owns this session
       const session = await storage.getChatSession(sessionId);
