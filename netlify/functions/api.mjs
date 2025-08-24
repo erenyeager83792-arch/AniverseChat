@@ -132,7 +132,7 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
           { role: "user", content: content }
         ],
         max_tokens: 1000,
-        temperature: 0.7,
+        temperature: 0.3,
         top_p: 0.9,
         return_related_questions: false,
         stream: false,

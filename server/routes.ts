@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return_related_questions: false,
           stream: false,
           presence_penalty: 0,
-          frequency_penalty: 1
+          frequency_penalty: 0.1
         }),
       });
 

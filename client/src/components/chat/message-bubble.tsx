@@ -1,6 +1,18 @@
 import { Message } from "@/lib/chat-api";
 import { cn } from "@/lib/utils";
 import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1755968455298.jpg";
+import { format } from "date-fns";
+
+// Convert citation numbers [1], [2] etc. to superscript
+function formatCitations(text: string): string {
+  return text.replace(/\[(\d+)\]/g, (match, number) => {
+    const superscriptMap: { [key: string]: string } = {
+      '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵',
+      '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '0': '⁰'
+    };
+    return number.split('').map((digit: string) => superscriptMap[digit] || digit).join('');
+  });
+}
 
 interface MessageBubbleProps {
   message: Message;
@@ -9,10 +21,34 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, isLatest }: MessageBubbleProps) {
   const isUser = message.role === "user";
-  const timestamp = new Date(message.timestamp).toLocaleTimeString([], { 
-    hour: "2-digit", 
-    minute: "2-digit" 
-  });
+  
+  // Fix date formatting with proper error handling
+  const getFormattedTimestamp = () => {
+    try {
+      const date = new Date(message.timestamp);
+      if (isNaN(date.getTime())) {
+        return format(new Date(), 'MMM d, h:mm a');
+      }
+      const today = new Date();
+      const messageDate = new Date(date);
+      
+      // If today, show time
+      if (today.toDateString() === messageDate.toDateString()) {
+        return format(messageDate, 'h:mm a');
+      }
+      // If this year, show month and day
+      if (today.getFullYear() === messageDate.getFullYear()) {
+        return format(messageDate, 'MMM d, h:mm a');
+      }
+      // Otherwise show full date
+      return format(messageDate, 'MMM d, yyyy');
+    } catch (error) {
+      return format(new Date(), 'MMM d, h:mm a');
+    }
+  };
+  
+  const timestamp = getFormattedTimestamp();
+  const formattedContent = formatCitations(message.content);
 
   return (
     <div className={cn(
@@ -23,7 +59,7 @@ export function MessageBubble({ message, isLatest }: MessageBubbleProps) {
         {isUser ? (
           <div className="chat-bubble-user rounded-2xl rounded-br-md px-4 py-3 shadow-lg">
             <p className="text-white font-medium whitespace-pre-wrap" data-testid={`text-message-${message.id}`}>
-              {message.content}
+              {formattedContent}
             </p>
             <span className="text-xs text-white/70 mt-1 block" data-testid={`text-timestamp-${message.id}`}>
               {timestamp}
@@ -36,7 +72,7 @@ export function MessageBubble({ message, isLatest }: MessageBubbleProps) {
             </div>
             <div className="chat-bubble-ai rounded-2xl rounded-bl-md px-4 py-3 shadow-lg">
               <p className="text-white leading-relaxed whitespace-pre-wrap" data-testid={`text-message-${message.id}`}>
-                {message.content}
+                {formattedContent}
               </p>
               <span className="text-xs text-gray-400 mt-2 block" data-testid={`text-timestamp-${message.id}`}>
                 {timestamp}

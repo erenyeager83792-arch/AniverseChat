@@ -22,10 +22,12 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
   const { toast } = useToast();
 
   // Fetch messages
-  const { data: messages = [], isLoading } = useQuery({
+  const { data: messages = [], isLoading, error } = useQuery({
     queryKey: ["/api/chat/sessions", sessionId, "messages"],
     queryFn: () => chatApi.getMessages(sessionId),
     enabled: !!sessionId,
+    retry: 2,
+    staleTime: 5000,
   });
 
   // Send message mutation
@@ -33,6 +35,7 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
     mutationFn: (content: string) => chatApi.sendMessage(sessionId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/sessions", sessionId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/sessions"] });
       scrollToBottom();
     },
     onError: (error: any) => {
@@ -71,6 +74,17 @@ export function ChatInterface({ sessionId }: ChatInterfaceProps) {
   const handleQuickAction = (prompt: string) => {
     setInputValue(prompt);
   };
+
+  // Handle session errors
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Session Error",
+        description: "Unable to load messages. Creating a new chat session...",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

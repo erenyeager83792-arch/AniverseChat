@@ -17,7 +17,8 @@ interface ChatHistoryProps {
 export function ChatHistory({ currentSessionId, onSessionSelect, open, onOpenChange }: ChatHistoryProps) {
   const { data: sessions = [] } = useQuery<ChatSession[]>({
     queryKey: ['/api/chat/sessions'],
-    refetchInterval: 5000
+    refetchInterval: false,
+    staleTime: 10000
   });
 
   const formatDate = (date: Date | string) => {
