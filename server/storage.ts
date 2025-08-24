@@ -1,88 +1,111 @@
-import { type ChatSession, type Message, type InsertChatSession, type InsertMessage } from "@shared/schema";
-import { randomUUID } from "crypto";
+import {
+  users,
+  chatSessions,
+  messages,
+  type User,
+  type UpsertUser,
+  type ChatSession,
+  type Message,
+  type InsertChatSession,
+  type InsertMessage
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations (IMPORTANT) - mandatory for Replit Auth
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  // Chat operations
   createChatSession(session: InsertChatSession): Promise<ChatSession>;
   getChatSession(id: string): Promise<ChatSession | undefined>;
-  getAllChatSessions(): Promise<ChatSession[]>;
+  getAllChatSessions(userId: string): Promise<ChatSession[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   getMessagesBySessionId(sessionId: string): Promise<Message[]>;
   deleteMessage(id: string): Promise<void>;
   deleteChatSession(id: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private chatSessions: Map<string, ChatSession>;
-  private messages: Map<string, Message>;
-
-  constructor() {
-    this.chatSessions = new Map();
-    this.messages = new Map();
+export class DatabaseStorage implements IStorage {
+  // User operations (IMPORTANT) - mandatory for Replit Auth
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  // Chat operations
   async createChatSession(insertSession: InsertChatSession): Promise<ChatSession> {
-    const id = randomUUID();
-    const now = new Date();
-    const session: ChatSession = { 
-      ...insertSession, 
-      id,
-      createdAt: now,
-      updatedAt: now,
-      title: insertSession.title ?? null
-    };
-    this.chatSessions.set(id, session);
+    const [session] = await db
+      .insert(chatSessions)
+      .values(insertSession)
+      .returning();
     return session;
   }
 
   async getChatSession(id: string): Promise<ChatSession | undefined> {
-    return this.chatSessions.get(id);
+    const [session] = await db
+      .select()
+      .from(chatSessions)
+      .where(eq(chatSessions.id, id));
+    return session;
   }
 
-  async getAllChatSessions(): Promise<ChatSession[]> {
-    return Array.from(this.chatSessions.values()).sort(
-      (a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0)
-    );
+  async getAllChatSessions(userId: string): Promise<ChatSession[]> {
+    return await db
+      .select()
+      .from(chatSessions)
+      .where(eq(chatSessions.userId, userId))
+      .orderBy(desc(chatSessions.updatedAt));
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const id = randomUUID();
-    const message: Message = { 
-      ...insertMessage, 
-      id,
-      timestamp: new Date()
-    };
-    this.messages.set(id, message);
+    const [message] = await db
+      .insert(messages)
+      .values(insertMessage)
+      .returning();
     
     // Update session timestamp
-    const session = this.chatSessions.get(insertMessage.sessionId);
-    if (session) {
-      session.updatedAt = new Date();
-      this.chatSessions.set(insertMessage.sessionId, session);
-    }
+    await db
+      .update(chatSessions)
+      .set({ updatedAt: new Date() })
+      .where(eq(chatSessions.id, insertMessage.sessionId));
     
     return message;
   }
 
   async getMessagesBySessionId(sessionId: string): Promise<Message[]> {
-    return Array.from(this.messages.values())
-      .filter(message => message.sessionId === sessionId)
-      .sort((a, b) => (a.timestamp?.getTime() || 0) - (b.timestamp?.getTime() || 0));
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.sessionId, sessionId))
+      .orderBy(messages.timestamp);
   }
 
   async deleteMessage(id: string): Promise<void> {
-    this.messages.delete(id);
+    await db.delete(messages).where(eq(messages.id, id));
   }
 
   async deleteChatSession(id: string): Promise<void> {
-    this.chatSessions.delete(id);
-    // Delete all messages in this session
-    Array.from(this.messages.keys()).forEach(messageId => {
-      const message = this.messages.get(messageId);
-      if (message?.sessionId === id) {
-        this.messages.delete(messageId);
-      }
-    });
+    // Delete all messages first (foreign key constraint)
+    await db.delete(messages).where(eq(messages.sessionId, id));
+    // Then delete the session
+    await db.delete(chatSessions).where(eq(chatSessions.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
