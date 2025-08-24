@@ -11,6 +11,7 @@ import { ChatSettings } from "@/components/chat/chat-settings";
 import { Landing } from "@/components/Landing";
 import { useAuth } from "@/hooks/useAuth";
 import { chatApi } from "@/lib/chat-api";
+import backgroundImage from "@assets/artworks-000496368060-wd4wu9-t500x500_1756026201497.jpg";
 
 function Router() {
   // Always authenticated now - no login required
@@ -39,7 +40,10 @@ function Router() {
         <Route path="/">
           <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-bg to-dark-surface">
             {/* Background Pattern */}
-            <div className="absolute inset-0 bg-[url('/src/assets/file_00000000b8ac61f5b513d34bcf737fce_1755966573663.png')] bg-cover bg-center opacity-20 pointer-events-none"></div>
+            <div 
+              className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
+              style={{ backgroundImage: `url(${backgroundImage})` }}
+            ></div>
             
             <Header 
               onHistoryClick={() => setShowHistory(true)}

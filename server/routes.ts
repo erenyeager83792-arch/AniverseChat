@@ -51,6 +51,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat/sessions", async (req: any, res) => {
     try {
       const userId = getSessionUserId(req);
+      
+      await ensureUserExists(userId);
+      
       const sessionData = { 
         title: req.body.title || "New Chat",
         userId 
@@ -63,10 +66,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to ensure user exists
+  const ensureUserExists = async (userId: string) => {
+    let user = await storage.getUser(userId);
+    if (!user) {
+      user = await storage.upsertUser({
+        id: userId,
+        email: `user_${userId.slice(0, 8)}@aniverse.ai`,
+        firstName: 'AniVerse',
+        lastName: 'User',
+        profileImageUrl: '',
+      });
+    }
+    return user;
+  };
+
   // Get all chat sessions for user
   app.get("/api/chat/sessions", async (req: any, res) => {
     try {
       const userId = getSessionUserId(req);
+      await ensureUserExists(userId);
       const sessions = await storage.getAllChatSessions(userId);
       res.json(sessions);
     } catch (error) {
@@ -80,6 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sessionId } = req.params;
       const userId = getSessionUserId(req);
+      await ensureUserExists(userId);
       
       // Verify user owns this session
       const session = await storage.getChatSession(sessionId);
@@ -101,6 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sessionId } = req.params;
       const { content } = chatMessageSchema.parse(req.body);
       const userId = getSessionUserId(req);
+      await ensureUserExists(userId);
 
       // Check if session exists and user owns it
       const session = await storage.getChatSession(sessionId);
@@ -221,6 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sessionId } = req.params;
       const userId = getSessionUserId(req);
+      await ensureUserExists(userId);
       
       // Verify user owns this session
       const session = await storage.getChatSession(sessionId);

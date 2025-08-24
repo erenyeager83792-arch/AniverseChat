@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Clock, Settings, RotateCcw } from "lucide-react";
-import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1755968455298.jpg";
+import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1756026201520.jpg";
+import aniVerseLogo from "@assets/file_00000000b8ac61f5b513d34bcf737fce_1756026201376.png";
 
 interface HeaderProps {
   onHistoryClick: () => void;
@@ -18,8 +19,8 @@ export function Header({ onHistoryClick, onSettingsClick }: HeaderProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full border-3 border-anime-orange overflow-hidden">
-              <img src={animeAvatar} alt="AniVerse AI" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-lg overflow-hidden">
+              <img src={aniVerseLogo} alt="AniVerse AI" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-display font-bold text-white">AniVerse AI</h1>

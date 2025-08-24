@@ -1,6 +1,6 @@
 import { Message } from "@/lib/chat-api";
 import { cn } from "@/lib/utils";
-import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1755968455298.jpg";
+import animeAvatar from "@assets/a3922c432494e8836b1e11e9722c7115_1756026201520.jpg";
 import { format } from "date-fns";
 
 // Convert citation numbers [1], [2] etc. to superscript
