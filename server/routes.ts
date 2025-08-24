@@ -101,9 +101,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getSessionUserId(req);
       await ensureUserExists(userId);
       
-      // Verify user owns this session
+      // Check if session exists
       const session = await storage.getChatSession(sessionId);
-      if (!session || session.userId !== userId) {
+      if (!session) {
         return res.status(404).json({ error: "Session not found" });
       }
       
@@ -123,9 +123,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getSessionUserId(req);
       await ensureUserExists(userId);
 
-      // Check if session exists and user owns it
+      // Check if session exists (simplified validation - no strict user ownership in no-auth mode)
       const session = await storage.getChatSession(sessionId);
-      if (!session || session.userId !== userId) {
+      if (!session) {
         return res.status(404).json({ error: "Session not found" });
       }
 
@@ -244,9 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getSessionUserId(req);
       await ensureUserExists(userId);
       
-      // Verify user owns this session
+      // Check if session exists
       const session = await storage.getChatSession(sessionId);
-      if (!session || session.userId !== userId) {
+      if (!session) {
         return res.status(404).json({ error: "Session not found" });
       }
       
