@@ -1,5 +1,6 @@
 import express from 'express';
 import serverless from 'serverless-http';
+import crypto from 'crypto';
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "";
 
@@ -49,7 +50,11 @@ app.get('/api/auth/user', (req, res) => {
   });
 });
 
-// Chat session routes (simplified)
+// Session storage (in-memory for serverless)
+const sessions = new Map();
+const messages = new Map();
+
+// Chat session routes
 app.post("/api/chat/sessions", async (req, res) => {
   try {
     const id = crypto.randomUUID();
@@ -57,8 +62,10 @@ app.post("/api/chat/sessions", async (req, res) => {
       id,
       title: req.body.title || "New Chat",
       userId: "demo-user",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
+    sessions.set(id, session);
     res.json(session);
   } catch (error) {
     console.error("Error creating chat session:", error);
@@ -68,14 +75,8 @@ app.post("/api/chat/sessions", async (req, res) => {
 
 app.get("/api/chat/sessions", async (req, res) => {
   try {
-    // Return sample sessions for demo
-    const sessions = [{
-      id: 'demo-session-1',
-      title: 'Welcome to AniVerse AI',
-      userId: 'demo-user',
-      createdAt: new Date().toISOString()
-    }];
-    res.json(sessions);
+    const userSessions = Array.from(sessions.values()).filter(s => s.userId === "demo-user");
+    res.json(userSessions.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)));
   } catch (error) {
     console.error("Error fetching chat sessions:", error);
     res.status(500).json({ error: "Failed to fetch chat sessions" });
@@ -85,17 +86,28 @@ app.get("/api/chat/sessions", async (req, res) => {
 app.get("/api/chat/sessions/:sessionId/messages", async (req, res) => {
   try {
     const { sessionId } = req.params;
-    // Return sample messages for demo
-    const messages = [
-      {
-        id: 'msg-1',
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    
+    const sessionMessages = messages.get(sessionId) || [];
+    
+    // Add initial greeting if no messages exist
+    if (sessionMessages.length === 0) {
+      const greetingMessage = {
+        id: crypto.randomUUID(),
         sessionId,
         role: 'assistant',
         content: 'Hello! I\'m AniVerse AI, your anime and manga companion. What would you like to discuss today?',
         timestamp: new Date().toISOString()
-      }
-    ];
-    res.json(messages);
+      };
+      sessionMessages.push(greetingMessage);
+      messages.set(sessionId, sessionMessages);
+    }
+    
+    res.json(sessionMessages);
   } catch (error) {
     console.error("Error fetching messages:", error);
     res.status(500).json({ error: "Failed to fetch messages" });
@@ -111,20 +123,46 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
       return res.status(400).json({ error: "Message content is required" });
     }
 
-    // Create user message
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    console.log(`[CHAT] Processing message for session ${sessionId}: "${content.substring(0, 50)}..."`); 
+
+    // Get existing messages for context
+    const sessionMessages = messages.get(sessionId) || [];
+    
+    // Save user message
     const userMessage = {
       id: crypto.randomUUID(),
       sessionId,
-      role: "user",
+      role: "user", 
       content: content,
       timestamp: new Date().toISOString()
     };
+    sessionMessages.push(userMessage);
 
-    let aiResponse = "I'm currently in demo mode. Please set up your PERPLEXITY_API_KEY environment variable for full AI functionality.";
+    let aiResponse = "I'm currently in demo mode. Please configure your PERPLEXITY_API_KEY environment variable for full AI functionality.";
 
     // Call Perplexity API if available
     if (PERPLEXITY_API_KEY) {
       try {
+        console.log('[CHAT] Calling Perplexity API with sonar model');
+        
+        // Prepare conversation history (last 10 messages for context)
+        const recentMessages = sessionMessages.slice(-10);
+        const perplexityMessages = [
+          {
+            role: "system",
+            content: "You are AniVerse AI, an intelligent assistant specialized in anime and manga. You have deep knowledge about anime series, manga titles, characters, storylines, recommendations, and the broader anime/manga culture. Provide detailed, accurate, and engaging responses about anime and manga topics. Be enthusiastic and knowledgeable while maintaining a friendly tone. Always respond to greetings like 'hi', 'hello', 'hey' in a friendly manner."
+          },
+          ...recentMessages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        ];
+        
         const perplexityResponse = await fetch("https://api.perplexity.ai/chat/completions", {
           method: "POST",
           headers: {
@@ -133,16 +171,10 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
           },
           body: JSON.stringify({
             model: "sonar",
-            messages: [
-              {
-                role: "system",
-                content: "You are AniVerse AI, an expert assistant specialized in anime and manga. Provide detailed, accurate, and enthusiastic responses about anime series, manga, characters, plot analysis, recommendations, and industry insights."
-              },
-              { role: "user", content: content }
-            ],
-            max_tokens: 1000,
+            messages: perplexityMessages,
             temperature: 0.3,
             top_p: 0.9,
+            return_images: false,
             return_related_questions: false,
             stream: false,
             presence_penalty: 0,
@@ -153,11 +185,33 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
         if (perplexityResponse.ok) {
           const data = await perplexityResponse.json();
           aiResponse = data.choices?.[0]?.message?.content || aiResponse;
+          console.log(`[CHAT] AI response received, length: ${aiResponse.length} characters`);
+        } else {
+          console.error(`[CHAT] Perplexity API error: ${perplexityResponse.status}`);
         }
       } catch (apiError) {
-        console.error("Perplexity API error:", apiError);
+        console.error("[CHAT] Perplexity API error:", apiError);
+        aiResponse = "Sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
       }
     }
+
+    // Save AI response
+    const aiMessage = {
+      id: crypto.randomUUID(),
+      sessionId,
+      role: "assistant",
+      content: aiResponse,
+      timestamp: new Date().toISOString()
+    };
+    sessionMessages.push(aiMessage);
+    
+    // Update session timestamp
+    const session = sessions.get(sessionId);
+    session.updatedAt = new Date().toISOString();
+    sessions.set(sessionId, session);
+    
+    // Store updated messages
+    messages.set(sessionId, sessionMessages);
 
     res.json({
       message: aiResponse,
@@ -165,7 +219,7 @@ app.post("/api/chat/sessions/:sessionId/messages", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error processing message:", error);
+    console.error("[CHAT] Error processing message:", error);
     res.status(500).json({ 
       error: "Failed to process message"
     });
