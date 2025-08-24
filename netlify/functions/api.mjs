@@ -94,37 +94,39 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Configure Google OAuth2 Strategy
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: `${process.env.DEPLOY_PRIME_URL || process.env.URL}/api/auth/google/callback`
-},
-async (accessToken, refreshToken, profile, done) => {
-  try {
-    const user = {
-      id: profile.id,
-      email: profile.emails?.[0]?.value || '',
-      firstName: profile.name?.givenName || '',
-      lastName: profile.name?.familyName || '',
-      profileImageUrl: profile.photos?.[0]?.value || '',
-      accessToken,
-      refreshToken
-    };
+// Configure Google OAuth2 Strategy only if credentials are available
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: `${process.env.DEPLOY_PRIME_URL || process.env.URL}/api/auth/google/callback`
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      const user = {
+        id: profile.id,
+        email: profile.emails?.[0]?.value || '',
+        firstName: profile.name?.givenName || '',
+        lastName: profile.name?.familyName || '',
+        profileImageUrl: profile.photos?.[0]?.value || '',
+        accessToken,
+        refreshToken
+      };
 
-    await storage.upsertUser({
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profileImageUrl: user.profileImageUrl,
-    });
+      await storage.upsertUser({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+      });
 
-    return done(null, user);
-  } catch (error) {
-    return done(error, undefined);
-  }
-}));
+      return done(null, user);
+    } catch (error) {
+      return done(error, undefined);
+    }
+  }));
+}
 
 passport.serializeUser((user, cb) => cb(null, user));
 passport.deserializeUser((user, cb) => cb(null, user));
@@ -149,17 +151,33 @@ app.use((req, res, next) => {
   }
 });
 
-// Authentication routes
-app.get("/api/auth/google", 
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+// Authentication routes - only if Google OAuth is configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  app.get("/api/auth/google", 
+    passport.authenticate("google", { scope: ["profile", "email"] })
+  );
 
-app.get("/api/auth/google/callback", 
-  passport.authenticate("google", { failureRedirect: "/login" }),
-  (req, res) => {
-    res.redirect("/");
-  }
-);
+  app.get("/api/auth/google/callback", 
+    passport.authenticate("google", { failureRedirect: "/login" }),
+    (req, res) => {
+      res.redirect("/");
+    }
+  );
+} else {
+  // Fallback routes when OAuth is not configured
+  app.get("/api/auth/google", (req, res) => {
+    res.status(503).json({ 
+      error: "Google OAuth not configured", 
+      message: "Google Client ID and Client Secret must be set in environment variables" 
+    });
+  });
+
+  app.get("/api/auth/google/callback", (req, res) => {
+    res.status(503).json({ 
+      error: "Google OAuth not configured" 
+    });
+  });
+}
 
 app.get("/api/logout", (req, res) => {
   req.logout((err) => {
